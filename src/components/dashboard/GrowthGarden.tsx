@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Sprout, Flower2, TreeDeciduous } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface SavingsGoal {
   id: string;
@@ -31,6 +33,8 @@ const getPlantIcon = (stage: SavingsGoal["stage"], progress: number) => {
 };
 
 const GrowthGarden = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="mx-5 mt-6 rounded-2xl bg-card p-5 shadow-sm animate-slide-up" style={{ animationDelay: "0.2s" }}>
       <div className="flex items-center justify-between mb-4">
@@ -38,7 +42,7 @@ const GrowthGarden = () => {
           <h3 className="font-semibold text-foreground">Growth Garden 🌿</h3>
           <p className="text-xs text-muted-foreground">Watch your savings bloom</p>
         </div>
-        <Button variant="outline" size="sm" className="text-xs">
+        <Button variant="outline" size="sm" className="text-xs" onClick={() => navigate("/goals")}>
           + New Goal
         </Button>
       </div>
@@ -74,7 +78,11 @@ const GrowthGarden = () => {
         {goals.map((goal) => {
           const progress = (goal.current / goal.target) * 100;
           return (
-            <div key={goal.id} className="flex items-center gap-3">
+            <div 
+              key={goal.id} 
+              className="flex items-center gap-3 cursor-pointer hover:bg-secondary/50 p-2 -mx-2 rounded-xl transition-colors"
+              onClick={() => navigate("/goals")}
+            >
               <div className="h-10 w-10 rounded-xl bg-secondary flex items-center justify-center shrink-0">
                 {getPlantIcon(goal.stage, progress)}
               </div>
