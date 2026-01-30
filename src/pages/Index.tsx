@@ -55,7 +55,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       <Header userName={displayName} />
-      <BalanceCard balance={4250} income={5200} expenses={950} />
+      <BalanceCard balance={85000} income={125000} expenses={40000} />
       <EmotionTracker />
       <GrowthGarden />
       <InsightCards />

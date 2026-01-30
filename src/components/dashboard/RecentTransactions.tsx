@@ -17,45 +17,53 @@ const transactions: Transaction[] = [
     id: "1",
     name: "Spotify Premium",
     category: "Entertainment",
-    amount: -9.99,
+    amount: -149,
     date: "Today",
     icon: <Music className="h-4 w-4" />,
   },
   {
     id: "2",
-    name: "Starbucks",
+    name: "Chai Point",
     category: "Food & Drink",
-    amount: -6.50,
+    amount: -85,
     date: "Today",
     icon: <Coffee className="h-4 w-4" />,
     emotionTag: "😤 Stress buy",
   },
   {
     id: "3",
-    name: "Uber Eats",
+    name: "Swiggy",
     category: "Food & Drink",
-    amount: -24.99,
+    amount: -450,
     date: "Yesterday",
     icon: <Utensils className="h-4 w-4" />,
   },
   {
     id: "4",
-    name: "ZARA",
+    name: "Myntra",
     category: "Shopping",
-    amount: -89.00,
+    amount: -2499,
     date: "Yesterday",
     icon: <ShoppingBag className="h-4 w-4" />,
     emotionTag: "🤑 FOMO buy",
   },
   {
     id: "5",
-    name: "Gas Station",
+    name: "Petrol Pump",
     category: "Transport",
-    amount: -45.00,
+    amount: -1500,
     date: "2 days ago",
     icon: <Car className="h-4 w-4" />,
   },
 ];
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+  }).format(Math.abs(amount));
+};
 
 const getCategoryColor = (category: string) => {
   switch (category) {
@@ -114,7 +122,7 @@ const RecentTransactions = () => {
               "text-sm font-semibold",
               transaction.amount < 0 ? "text-foreground" : "text-success"
             )}>
-              {transaction.amount < 0 ? "-" : "+"}${Math.abs(transaction.amount).toFixed(2)}
+              {transaction.amount < 0 ? "-" : "+"}{formatCurrency(transaction.amount)}
             </span>
           </div>
         ))}
