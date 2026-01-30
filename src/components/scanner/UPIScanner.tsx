@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { QrCode } from "lucide-react";
 import { toast } from "sonner";
 import UPIAppSelector from "./UPIAppSelector";
 import PaymentConfirmation from "./PaymentConfirmation";
-
 interface UPIData {
   payeeName: string;
   payeeVpa: string;
@@ -150,12 +149,15 @@ const UPIScanner = ({ open, onClose, onExpenseAdded }: UPIScannerProps) => {
     <>
       {/* Scanner Dialog */}
       <Dialog open={open && step === "scanning"} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" aria-describedby="scanner-description">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <QrCode className="h-5 w-5 text-primary" />
               Scan UPI QR Code
             </DialogTitle>
+            <DialogDescription id="scanner-description">
+              Point your camera at a UPI QR code to scan and pay
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -165,7 +167,7 @@ const UPIScanner = ({ open, onClose, onExpenseAdded }: UPIScannerProps) => {
               className="w-full aspect-square rounded-xl overflow-hidden bg-muted"
             />
             <p className="text-sm text-muted-foreground text-center">
-              Point your camera at a UPI QR code to scan
+              Ensure camera permissions are enabled
             </p>
           </div>
         </DialogContent>
