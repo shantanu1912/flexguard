@@ -9,7 +9,7 @@ import BottomNavigation from "@/components/dashboard/BottomNavigation";
 const Index = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
-      <Header userName="Alex" />
+      <Header userName="Khushi" />
       <BalanceCard balance={4250} income={5200} expenses={950} />
       <EmotionTracker />
       <GrowthGarden />
