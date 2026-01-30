@@ -2,12 +2,20 @@ import { PieChart, TrendingUp, TrendingDown, Calendar } from "lucide-react";
 import BottomNavigation from "@/components/dashboard/BottomNavigation";
 
 const spendingCategories = [
-  { name: "Food & Drink", amount: 420, percentage: 35, color: "bg-warning" },
-  { name: "Shopping", amount: 280, percentage: 23, color: "bg-garden-flower" },
-  { name: "Entertainment", amount: 180, percentage: 15, color: "bg-accent" },
-  { name: "Transport", amount: 150, percentage: 12, color: "bg-info" },
-  { name: "Other", amount: 170, percentage: 15, color: "bg-muted-foreground" },
+  { name: "Food & Drink", amount: 8500, percentage: 35, color: "bg-warning" },
+  { name: "Shopping", amount: 5600, percentage: 23, color: "bg-garden-flower" },
+  { name: "Entertainment", amount: 3600, percentage: 15, color: "bg-accent" },
+  { name: "Transport", amount: 2900, percentage: 12, color: "bg-info" },
+  { name: "Other", amount: 3400, percentage: 15, color: "bg-muted-foreground" },
 ];
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    minimumFractionDigits: 0,
+  }).format(amount);
+};
 
 const Insights = () => {
   return (
@@ -23,7 +31,7 @@ const Insights = () => {
           <Calendar className="h-4 w-4" />
           <span className="text-sm opacity-90">January 2026</span>
         </div>
-        <h2 className="text-3xl font-bold mb-4">$1,200</h2>
+        <h2 className="text-3xl font-bold mb-4">{formatCurrency(24000)}</h2>
         <div className="flex gap-4">
           <div className="flex items-center gap-2">
             <TrendingDown className="h-4 w-4 text-green-300" />
@@ -40,7 +48,7 @@ const Insights = () => {
             <div key={cat.name}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-foreground">{cat.name}</span>
-                <span className="text-sm text-muted-foreground">${cat.amount}</span>
+                <span className="text-sm text-muted-foreground">{formatCurrency(cat.amount)}</span>
               </div>
               <div className="h-2 rounded-full bg-secondary overflow-hidden">
                 <div
