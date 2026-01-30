@@ -7,9 +7,11 @@ import GrowthGarden from "@/components/dashboard/GrowthGarden";
 import InsightCards from "@/components/dashboard/InsightCards";
 import RecentTransactions from "@/components/dashboard/RecentTransactions";
 import BottomNavigation from "@/components/dashboard/BottomNavigation";
+import FloatingScanButton from "@/components/scanner/FloatingScanButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -48,6 +50,17 @@ const Index = () => {
     );
   }
 
+  const handleExpenseAdded = (expense: {
+    name: string;
+    category: string;
+    amount: number;
+    payeeVpa: string;
+  }) => {
+    // For now, just show a confirmation - in a full implementation,
+    // this would save to a transactions table
+    console.log("Expense logged:", expense);
+  };
+
   if (!user) {
     return null;
   }
@@ -60,6 +73,7 @@ const Index = () => {
       <GrowthGarden />
       <InsightCards />
       <RecentTransactions />
+      <FloatingScanButton onExpenseAdded={handleExpenseAdded} />
       <BottomNavigation />
     </div>
   );
