@@ -1,5 +1,6 @@
 import { ShoppingBag, Coffee, Utensils, Car, Music } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface Transaction {
   id: string;
@@ -72,11 +73,18 @@ const getCategoryColor = (category: string) => {
 };
 
 const RecentTransactions = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="mx-5 mt-6 mb-24 animate-slide-up" style={{ animationDelay: "0.4s" }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-foreground">Recent Activity</h3>
-        <button className="text-sm text-primary font-medium">View all</button>
+        <button 
+          className="text-sm text-primary font-medium hover:underline"
+          onClick={() => navigate("/insights")}
+        >
+          View all
+        </button>
       </div>
       
       <div className="space-y-3">
@@ -84,6 +92,7 @@ const RecentTransactions = () => {
           <div
             key={transaction.id}
             className="flex items-center gap-3 p-3 rounded-xl bg-card hover:bg-secondary/50 transition-colors cursor-pointer"
+            onClick={() => navigate("/insights")}
           >
             <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", getCategoryColor(transaction.category))}>
               {transaction.icon}

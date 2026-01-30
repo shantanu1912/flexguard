@@ -1,5 +1,6 @@
 import { TrendingUp, AlertTriangle, Trophy, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 interface Insight {
   id: string;
@@ -56,11 +57,18 @@ const getInsightStyles = (type: Insight["type"]) => {
 };
 
 const InsightCards = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="mx-5 mt-6 animate-slide-up" style={{ animationDelay: "0.3s" }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-foreground">Quick Insights</h3>
-        <button className="text-sm text-primary font-medium">See all</button>
+        <button 
+          className="text-sm text-primary font-medium hover:underline"
+          onClick={() => navigate("/insights")}
+        >
+          See all
+        </button>
       </div>
       
       <div className="flex gap-3 overflow-x-auto pb-2 -mx-5 px-5 snap-x snap-mandatory">
@@ -68,10 +76,11 @@ const InsightCards = () => {
           <div
             key={insight.id}
             className={cn(
-              "min-w-[200px] max-w-[200px] p-4 rounded-2xl border snap-start",
+              "min-w-[200px] max-w-[200px] p-4 rounded-2xl border snap-start cursor-pointer hover:scale-[1.02] transition-transform",
               getInsightStyles(insight.type)
             )}
             style={{ animationDelay: `${0.3 + index * 0.1}s` }}
+            onClick={() => navigate("/insights")}
           >
             <div className="flex items-center gap-2 mb-2">
               <div className="p-1.5 rounded-lg bg-current/10">{insight.icon}</div>
