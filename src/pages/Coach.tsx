@@ -1,12 +1,14 @@
-import { useState } from "react";
-import { Send, Brain, Sparkles } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Send, Brain, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BottomNavigation from "@/components/dashboard/BottomNavigation";
+import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   id: string;
-  role: "user" | "coach";
+  role: "user" | "assistant";
   content: string;
 }
 
@@ -17,19 +19,27 @@ const suggestedQuestions = [
   "Should I pay off debt or save?",
 ];
 
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/financial-coach`;
+
 const Coach = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      role: "coach",
-      content: "Hey! 👋 I'm your AI Financial Coach. I'm here to help you build better money habits and reach your goals. What would you like to know?",
+      role: "assistant",
+      content: "Hey! 👋 I'm your **AI Financial Coach**. I'm here to help you build better money habits and reach your goals. Ask me anything about budgeting, saving, investing, debt management, or financial psychology!",
     },
   ]);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSend = (text?: string) => {
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const handleSend = async (text?: string) => {
     const messageText = text || input;
-    if (!messageText.trim()) return;
+    if (!messageText.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -39,33 +49,122 @@ const Coach = () => {
 
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const coachResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "coach",
-        content: getCoachResponse(messageText),
-      };
-      setMessages((prev) => [...prev, coachResponse]);
-    }, 1000);
-  };
+    // Build message history for context
+    const messageHistory = [...messages, userMessage].map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
 
-  const getCoachResponse = (question: string): string => {
-    const q = question.toLowerCase();
-    if (q.includes("save") || q.includes("saving")) {
-      return "Great question! Start with the 50/30/20 rule: 50% on needs, 30% on wants, 20% on savings. Try automating your savings so it happens before you even see the money. Small amounts add up - even $20/week becomes $1,040/year! 💰";
+    let assistantContent = "";
+
+    try {
+      const response = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: messageHistory }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 429) {
+          toast.error("Rate limit reached. Please wait a moment and try again.");
+        } else if (response.status === 402) {
+          toast.error("AI credits exhausted. Please add credits to continue.");
+        } else {
+          toast.error(errorData.error || "Something went wrong. Please try again.");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let streamDone = false;
+
+      // Create assistant message placeholder
+      const assistantId = (Date.now() + 1).toString();
+      setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId ? { ...msg, content: assistantContent } : msg
+                )
+              );
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split("\n")) {
+          if (!raw) continue;
+          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+          if (raw.startsWith(":") || raw.trim() === "") continue;
+          if (!raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId ? { ...msg, content: assistantContent } : msg
+                )
+              );
+            }
+          } catch {
+            /* ignore partial leftovers */
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast.error("Failed to connect to AI Coach. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-    if (q.includes("50/30/20") || q.includes("rule")) {
-      return "The 50/30/20 rule is a simple budgeting method: 50% of income goes to needs (rent, groceries), 30% to wants (dining out, entertainment), and 20% to savings/debt. It's a great starting point! 📊";
-    }
-    if (q.includes("impulse") || q.includes("stop buying")) {
-      return "Try the 24-hour rule: wait a day before buying anything over $50. Also, unsubscribe from marketing emails and remove saved payment info from shopping sites. Your FOMO purchases dropped 60% when you tracked emotions! 🧠";
-    }
-    if (q.includes("debt") || q.includes("pay off")) {
-      return "It depends! High-interest debt (credit cards) should be priority #1. But also build a small emergency fund ($500-1000) first. Consider the avalanche method (highest interest first) or snowball (smallest balance first) for motivation! 📈";
-    }
-    return "That's a great topic to explore! Based on your spending patterns, I'd suggest focusing on reducing your food & drink expenses first - you're spending 35% there. Want specific tips for that? 🎯";
   };
 
   return (
@@ -77,7 +176,7 @@ const Coach = () => {
         <div>
           <h1 className="text-lg font-bold text-foreground">AI Coach</h1>
           <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Sparkles className="h-3 w-3" /> Powered by behavioral science
+            <Sparkles className="h-3 w-3" /> Powered by Lovable AI
           </p>
         </div>
       </header>
@@ -96,10 +195,24 @@ const Coach = () => {
                   : "bg-card border border-border text-foreground rounded-bl-md"
               }`}
             >
-              <p className="text-sm">{msg.content}</p>
+              {msg.role === "assistant" ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>{msg.content || "..."}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm">{msg.content}</p>
+              )}
             </div>
           </div>
         ))}
+        {isLoading && messages[messages.length - 1]?.role === "user" && (
+          <div className="flex justify-start">
+            <div className="bg-card border border-border rounded-2xl rounded-bl-md p-4">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          </div>
+        )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Suggested Questions */}
@@ -111,7 +224,8 @@ const Coach = () => {
               <button
                 key={q}
                 onClick={() => handleSend(q)}
-                className="text-xs px-3 py-2 rounded-full bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+                disabled={isLoading}
+                className="text-xs px-3 py-2 rounded-full bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground transition-colors disabled:opacity-50"
               >
                 {q}
               </button>
@@ -128,10 +242,16 @@ const Coach = () => {
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask your AI coach..."
             className="flex-1"
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
+            disabled={isLoading}
           />
-          <Button variant="gradient" size="icon" onClick={() => handleSend()}>
-            <Send className="h-4 w-4" />
+          <Button
+            variant="gradient"
+            size="icon"
+            onClick={() => handleSend()}
+            disabled={isLoading || !input.trim()}
+          >
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       </div>
