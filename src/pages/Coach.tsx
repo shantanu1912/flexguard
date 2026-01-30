@@ -1,15 +1,31 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Brain, Sparkles, Loader2 } from "lucide-react";
+import { Send, Brain, Sparkles, Loader2, Plus, History, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import BottomNavigation from "@/components/dashboard/BottomNavigation";
 import { toast } from "sonner";
 import ReactMarkdown from "react-markdown";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+}
+
+interface Conversation {
+  id: string;
+  title: string;
+  created_at: string;
 }
 
 const suggestedQuestions = [
@@ -22,24 +38,99 @@ const suggestedQuestions = [
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/financial-coach`;
 
 const Coach = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      role: "assistant",
-      content: "Hey! 👋 I'm your **AI Financial Coach**. I'm here to help you build better money habits and reach your goals. Ask me anything about budgeting, saving, investing, debt management, or financial psychology!",
-    },
-  ]);
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+  
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      loadConversations();
+    }
+  }, [user]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const loadConversations = async () => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from("conversations")
+      .select("id, title, created_at")
+      .order("updated_at", { ascending: false });
+
+    if (error) {
+      console.error("Error loading conversations:", error);
+      return;
+    }
+
+    setConversations(data || []);
+  };
+
+  const loadConversation = async (conversationId: string) => {
+    setIsLoadingHistory(true);
+    
+    const { data, error } = await supabase
+      .from("messages")
+      .select("id, role, content")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error loading messages:", error);
+      toast.error("Failed to load conversation");
+      setIsLoadingHistory(false);
+      return;
+    }
+
+    setCurrentConversationId(conversationId);
+    setMessages(data?.map(m => ({ ...m, role: m.role as "user" | "assistant" })) || []);
+    setIsLoadingHistory(false);
+  };
+
+  const startNewConversation = () => {
+    setCurrentConversationId(null);
+    setMessages([]);
+  };
+
+  const deleteConversation = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    const { error } = await supabase
+      .from("conversations")
+      .delete()
+      .eq("id", conversationId);
+
+    if (error) {
+      toast.error("Failed to delete conversation");
+      return;
+    }
+
+    if (currentConversationId === conversationId) {
+      startNewConversation();
+    }
+    
+    loadConversations();
+    toast.success("Conversation deleted");
+  };
+
   const handleSend = async (text?: string) => {
     const messageText = text || input;
-    if (!messageText.trim() || isLoading) return;
+    if (!messageText.trim() || isLoading || !user) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -51,15 +142,39 @@ const Coach = () => {
     setInput("");
     setIsLoading(true);
 
-    // Build message history for context
-    const messageHistory = [...messages, userMessage].map((msg) => ({
-      role: msg.role,
-      content: msg.content,
-    }));
-
-    let assistantContent = "";
+    let conversationId = currentConversationId;
 
     try {
+      // Create conversation if it doesn't exist
+      if (!conversationId) {
+        const title = messageText.slice(0, 50) + (messageText.length > 50 ? "..." : "");
+        const { data: newConv, error: convError } = await supabase
+          .from("conversations")
+          .insert({ user_id: user.id, title })
+          .select("id")
+          .single();
+
+        if (convError) throw convError;
+        conversationId = newConv.id;
+        setCurrentConversationId(conversationId);
+        loadConversations();
+      }
+
+      // Save user message
+      await supabase.from("messages").insert({
+        conversation_id: conversationId,
+        role: "user",
+        content: messageText,
+      });
+
+      // Build message history for context
+      const messageHistory = [...messages, userMessage].map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      let assistantContent = "";
+
       const response = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
@@ -91,7 +206,6 @@ const Coach = () => {
       let textBuffer = "";
       let streamDone = false;
 
-      // Create assistant message placeholder
       const assistantId = (Date.now() + 1).toString();
       setMessages((prev) => [...prev, { id: assistantId, role: "assistant", content: "" }]);
 
@@ -159,6 +273,15 @@ const Coach = () => {
           }
         }
       }
+
+      // Save assistant message
+      if (assistantContent && conversationId) {
+        await supabase.from("messages").insert({
+          conversation_id: conversationId,
+          role: "assistant",
+          content: assistantContent,
+        });
+      }
     } catch (error) {
       console.error("Chat error:", error);
       toast.error("Failed to connect to AI Coach. Please try again.");
@@ -167,44 +290,121 @@ const Coach = () => {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const welcomeMessage: Message = {
+    id: "welcome",
+    role: "assistant",
+    content: "Hey! 👋 I'm your **AI Financial Coach**. I'm here to help you build better money habits and reach your goals. Ask me anything about budgeting, saving, investing, debt management, or financial psychology!",
+  };
+
+  const displayMessages = messages.length === 0 ? [welcomeMessage] : messages;
+
   return (
     <div className="min-h-screen bg-background flex flex-col pb-20">
-      <header className="px-5 py-4 flex items-center gap-3 border-b border-border">
-        <div className="h-10 w-10 rounded-full gradient-primary flex items-center justify-center">
-          <Brain className="h-5 w-5 text-primary-foreground" />
+      <header className="px-5 py-4 flex items-center justify-between border-b border-border">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-full gradient-primary flex items-center justify-center">
+            <Brain className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-foreground">AI Coach</h1>
+            <p className="text-xs text-muted-foreground flex items-center gap-1">
+              <Sparkles className="h-3 w-3" /> Powered by Lovable AI
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-lg font-bold text-foreground">AI Coach</h1>
-          <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <Sparkles className="h-3 w-3" /> Powered by Lovable AI
-          </p>
+        
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={startNewConversation}>
+            <Plus className="h-5 w-5" />
+          </Button>
+          
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <History className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle>Chat History</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 space-y-2">
+                {conversations.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No conversations yet
+                  </p>
+                ) : (
+                  conversations.map((conv) => (
+                    <div
+                      key={conv.id}
+                      onClick={() => loadConversation(conv.id)}
+                      className={`p-3 rounded-lg cursor-pointer flex items-center justify-between group ${
+                        currentConversationId === conv.id
+                          ? "bg-primary/10 border border-primary/20"
+                          : "bg-card hover:bg-secondary/50"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{conv.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(conv.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="opacity-0 group-hover:opacity-100 h-8 w-8"
+                        onClick={(e) => deleteConversation(conv.id, e)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </header>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-2xl p-4 ${
-                msg.role === "user"
-                  ? "gradient-primary text-primary-foreground rounded-br-md"
-                  : "bg-card border border-border text-foreground rounded-bl-md"
-              }`}
-            >
-              {msg.role === "assistant" ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown>{msg.content || "..."}</ReactMarkdown>
-                </div>
-              ) : (
-                <p className="text-sm">{msg.content}</p>
-              )}
-            </div>
+        {isLoadingHistory ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ))}
+        ) : (
+          displayMessages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl p-4 ${
+                  msg.role === "user"
+                    ? "gradient-primary text-primary-foreground rounded-br-md"
+                    : "bg-card border border-border text-foreground rounded-bl-md"
+                }`}
+              >
+                {msg.role === "assistant" ? (
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown>{msg.content || "..."}</ReactMarkdown>
+                  </div>
+                ) : (
+                  <p className="text-sm">{msg.content}</p>
+                )}
+              </div>
+            </div>
+          ))
+        )}
         {isLoading && messages[messages.length - 1]?.role === "user" && (
           <div className="flex justify-start">
             <div className="bg-card border border-border rounded-2xl rounded-bl-md p-4">
@@ -216,7 +416,7 @@ const Coach = () => {
       </div>
 
       {/* Suggested Questions */}
-      {messages.length <= 2 && (
+      {messages.length === 0 && (
         <div className="px-5 pb-4">
           <p className="text-xs text-muted-foreground mb-2">Suggested questions:</p>
           <div className="flex flex-wrap gap-2">
