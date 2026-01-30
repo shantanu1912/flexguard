@@ -1,4 +1,4 @@
-import { Bell, Settings } from "lucide-react";
+import { Bell, Settings, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
@@ -14,19 +14,33 @@ const Header = ({ userName }: HeaderProps) => {
   };
 
   return (
-    <header className="flex items-center justify-between px-5 py-4">
-      <div>
-        <p className="text-sm text-muted-foreground">{greeting()}</p>
-        <h1 className="text-xl font-bold text-foreground">{userName} 👋</h1>
+    <header className="px-5 py-4 space-y-3">
+      {/* App Branding */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
+            <Shield className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-foreground tracking-tight">FlexGuard</h1>
+            <p className="text-[10px] text-muted-foreground -mt-0.5">AI Financial Intelligence</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="relative h-9 w-9">
+            <Bell className="h-5 w-5" />
+            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-9 w-9">
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
+      
+      {/* User Greeting */}
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-accent" />
-        </Button>
-        <Button variant="ghost" size="icon">
-          <Settings className="h-5 w-5" />
-        </Button>
+        <p className="text-sm text-muted-foreground">{greeting()},</p>
+        <span className="text-sm font-semibold text-foreground">{userName} 👋</span>
       </div>
     </header>
   );
