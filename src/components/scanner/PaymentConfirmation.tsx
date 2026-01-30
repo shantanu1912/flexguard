@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,12 +52,15 @@ const PaymentConfirmation = ({ open, onClose, upiData, onConfirm, onCancel }: Pa
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" aria-describedby="confirmation-description">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-lg">
             <Check className="h-5 w-5 text-primary" />
             Did you complete the payment?
           </DialogTitle>
+          <DialogDescription id="confirmation-description">
+            Confirm your payment details to log this expense
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
