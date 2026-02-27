@@ -6,17 +6,18 @@ interface UPIAppOption {
   id: string;
   name: string;
   scheme: string;
-  icon: string;
+  logo?: string;
+  fallbackIcon: string;
   color: string;
 }
 
 const upiApps: UPIAppOption[] = [
-  { id: "gpay", name: "Google Pay", scheme: "gpay", icon: "G", color: "bg-blue-500" },
-  { id: "phonepe", name: "PhonePe", scheme: "phonepe", icon: "P", color: "bg-purple-600" },
-  { id: "paytm", name: "Paytm", scheme: "paytm", icon: "₽", color: "bg-sky-500" },
-  { id: "amazonpay", name: "Amazon Pay", scheme: "amazonpay", icon: "A", color: "bg-amber-500" },
-  { id: "bhim", name: "BHIM", scheme: "bhim", icon: "B", color: "bg-emerald-600" },
-  { id: "default", name: "Other UPI App", scheme: "upi", icon: "U", color: "bg-muted-foreground" },
+  { id: "gpay", name: "Google Pay", scheme: "gpay", logo: "/upi-icons/gpay.png", fallbackIcon: "G", color: "bg-blue-500" },
+  { id: "phonepe", name: "PhonePe", scheme: "phonepe", logo: "/upi-icons/phonepe.png", fallbackIcon: "P", color: "bg-purple-600" },
+  { id: "paytm", name: "Paytm", scheme: "paytm", logo: "/upi-icons/paytm.png", fallbackIcon: "₽", color: "bg-sky-500" },
+  { id: "amazonpay", name: "Amazon Pay", scheme: "amazonpay", fallbackIcon: "A", color: "bg-amber-500" },
+  { id: "bhim", name: "BHIM UPI", scheme: "bhim", logo: "/upi-icons/bhim.png", fallbackIcon: "B", color: "bg-emerald-600" },
+  { id: "default", name: "Other UPI App", scheme: "upi", fallbackIcon: "U", color: "bg-muted-foreground" },
 ];
 
 interface UPIAppSelectorProps {
@@ -64,8 +65,12 @@ const UPIAppSelector = ({ open, onClose, upiUrl, onPaymentInitiated }: UPIAppSel
               className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-secondary transition-all"
               onClick={() => handleAppSelect(app)}
             >
-              <div className={`w-12 h-12 rounded-full ${app.color} flex items-center justify-center text-white font-bold text-lg`}>
-                {app.icon}
+              <div className={`w-12 h-12 rounded-full ${app.logo ? 'bg-white' : app.color} flex items-center justify-center overflow-hidden`}>
+                {app.logo ? (
+                  <img src={app.logo} alt={app.name} className="w-8 h-8 object-contain" />
+                ) : (
+                  <span className="text-white font-bold text-lg">{app.fallbackIcon}</span>
+                )}
               </div>
               <span className="text-xs text-muted-foreground text-center">{app.name}</span>
             </Button>
