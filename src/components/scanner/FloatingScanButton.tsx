@@ -17,13 +17,18 @@ const FloatingScanButton = ({ onExpenseAdded }: FloatingScanButtonProps) => {
 
   return (
     <>
-      <Button
-        onClick={() => setScannerOpen(true)}
-        className="fixed bottom-24 right-5 h-14 w-14 rounded-full shadow-lg z-40 gradient-hero hover:opacity-90 transition-all duration-200 hover:scale-105"
-        size="icon"
-      >
-        <ScanLine className="h-6 w-6 text-primary-foreground" />
-      </Button>
+      <div className="fixed bottom-24 right-5 z-40">
+        {/* Pulsing rings */}
+        <span className="absolute inset-0 rounded-full gradient-hero opacity-40 animate-ping" />
+        <span className="absolute inset-0 rounded-full gradient-hero opacity-30 animate-pulse-glow" />
+        <Button
+          onClick={() => setScannerOpen(true)}
+          className="relative h-14 w-14 rounded-full shadow-lg gradient-hero animate-gradient-shift hover:opacity-90 transition-all duration-300 hover:scale-110 active:scale-95"
+          size="icon"
+        >
+          <ScanLine className="h-6 w-6 text-primary-foreground" />
+        </Button>
+      </div>
 
       <UPIScanner
         open={scannerOpen}

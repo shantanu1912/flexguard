@@ -76,14 +76,16 @@ const InsightCards = () => {
           <div
             key={insight.id}
             className={cn(
-              "min-w-[200px] max-w-[200px] p-4 rounded-2xl border snap-start cursor-pointer hover:scale-[1.02] transition-transform",
+              "group min-w-[200px] max-w-[200px] p-4 rounded-2xl border snap-start cursor-pointer hover-lift press-down animate-slide-up",
               getInsightStyles(insight.type)
             )}
-            style={{ animationDelay: `${0.3 + index * 0.1}s` }}
+            style={{ animationDelay: `${0.3 + index * 0.08}s` }}
             onClick={() => navigate("/insights")}
           >
             <div className="flex items-center gap-2 mb-2">
-              <div className="p-1.5 rounded-lg bg-current/10">{insight.icon}</div>
+              <div className="p-1.5 rounded-lg bg-current/10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
+                {insight.icon}
+              </div>
               <span className="text-sm font-semibold">{insight.title}</span>
             </div>
             <p className="text-xs opacity-80">{insight.description}</p>

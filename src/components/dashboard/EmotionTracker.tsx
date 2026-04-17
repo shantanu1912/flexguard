@@ -19,8 +19,8 @@ const EmotionTracker = () => {
           <h3 className="font-semibold text-foreground">How are you feeling?</h3>
           <p className="text-xs text-muted-foreground">Track your emotions to understand spending triggers</p>
         </div>
-        <div className="h-10 w-10 rounded-full gradient-accent flex items-center justify-center">
-          <span className="text-lg">🧠</span>
+        <div className="h-10 w-10 rounded-full gradient-accent animate-gradient-shift flex items-center justify-center shadow-md hover:scale-110 hover:rotate-12 transition-transform cursor-pointer">
+          <span className="text-lg animate-bounce-soft">🧠</span>
         </div>
       </div>
       
@@ -30,20 +30,23 @@ const EmotionTracker = () => {
             key={emotion.label}
             onClick={() => setSelectedEmotion(emotion.label)}
             className={cn(
-              "flex flex-col items-center gap-1 min-w-[4.5rem] p-3 rounded-xl border-2 transition-all duration-200",
+              "flex flex-col items-center gap-1 min-w-[4.5rem] p-3 rounded-xl border-2 transition-all duration-300 press-down hover:-translate-y-1 hover:shadow-md",
               selectedEmotion === emotion.label
-                ? emotion.color
+                ? `${emotion.color} scale-105 shadow-md`
                 : "bg-secondary border-transparent hover:border-primary/30"
             )}
           >
-            <span className="text-2xl">{emotion.emoji}</span>
+            <span className={cn(
+              "text-2xl transition-transform duration-300",
+              selectedEmotion === emotion.label ? "scale-125 animate-bounce-soft" : "group-hover:scale-110"
+            )}>{emotion.emoji}</span>
             <span className="text-xs font-medium text-foreground">{emotion.label}</span>
           </button>
         ))}
       </div>
       
       {selectedEmotion && (
-        <div className="mt-4 p-3 rounded-xl bg-secondary/50 border border-primary/20">
+        <div className="mt-4 p-3 rounded-xl bg-secondary/50 border border-primary/20 animate-slide-up">
           <p className="text-sm text-foreground">
             <span className="font-medium text-primary">AI Insight:</span>{" "}
             {selectedEmotion === "FOMO" && "You're 3x more likely to overspend when feeling FOMO. Take 24hrs before big purchases!"}
