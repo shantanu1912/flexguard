@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 interface NewGoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (name: string, target: number, emoji: string) => void;
+  onSave: (name: string, target: number, emoji: string, deadline?: string) => void | Promise<void>;
 }
 
 const emojis = ["💰", "🏠", "🚗", "✈️", "💻", "📱", "🎓", "💍", "🛡️", "🎯"];
@@ -21,13 +21,15 @@ const emojis = ["💰", "🏠", "🚗", "✈️", "💻", "📱", "🎓", "💍"
 const NewGoalDialog = ({ open, onOpenChange, onSave }: NewGoalDialogProps) => {
   const [name, setName] = useState("");
   const [target, setTarget] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [selectedEmoji, setSelectedEmoji] = useState("💰");
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!name.trim() || !target) return;
-    onSave(name.trim(), Number(target), selectedEmoji);
+    await onSave(name.trim(), Number(target), selectedEmoji, deadline || undefined);
     setName("");
     setTarget("");
+    setDeadline("");
     setSelectedEmoji("💰");
     onOpenChange(false);
   };
@@ -74,13 +76,23 @@ const NewGoalDialog = ({ open, onOpenChange, onSave }: NewGoalDialogProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="target">Target Amount ($)</Label>
+            <Label htmlFor="target">Target Amount (₹)</Label>
             <Input
               id="target"
               type="number"
-              placeholder="1000"
+              placeholder="50000"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="deadline">Deadline (optional)</Label>
+            <Input
+              id="deadline"
+              type="date"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
             />
           </div>
         </div>
