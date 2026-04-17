@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      budgets: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          limit_amount: number
+          period: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: string
+          limit_amount: number
+          period?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          limit_amount?: number
+          period?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -37,6 +67,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      goal_contributions: {
+        Row: {
+          amount: number
+          contributed_at: string
+          created_at: string
+          goal_id: string
+          id: string
+          note: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          contributed_at?: string
+          created_at?: string
+          goal_id: string
+          id?: string
+          note?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          contributed_at?: string
+          created_at?: string
+          goal_id?: string
+          id?: string
+          note?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goal_contributions_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "savings_goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -92,6 +160,87 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      recurring_bills: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          frequency: string
+          id: string
+          is_active: boolean
+          name: string
+          next_due_date: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          category?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          next_due_date: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          next_due_date?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      savings_goals: {
+        Row: {
+          created_at: string
+          current_amount: number
+          deadline: string | null
+          emoji: string
+          id: string
+          name: string
+          status: string
+          target_amount: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          emoji?: string
+          id?: string
+          name: string
+          status?: string
+          target_amount: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_amount?: number
+          deadline?: string | null
+          emoji?: string
+          id?: string
+          name?: string
+          status?: string
+          target_amount?: number
           updated_at?: string
           user_id?: string
         }
