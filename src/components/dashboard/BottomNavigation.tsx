@@ -1,4 +1,4 @@
-import { Home, PieChart, Target, Brain, User } from "lucide-react";
+import { Home, Wallet, Target, Receipt, Brain } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -11,10 +11,10 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "home", label: "Home", icon: <Home className="h-5 w-5" />, path: "/" },
-  { id: "insights", label: "Insights", icon: <PieChart className="h-5 w-5" />, path: "/insights" },
+  { id: "budgets", label: "Budgets", icon: <Wallet className="h-5 w-5" />, path: "/budgets" },
   { id: "goals", label: "Goals", icon: <Target className="h-5 w-5" />, path: "/goals" },
-  { id: "coach", label: "AI Coach", icon: <Brain className="h-5 w-5" />, path: "/coach" },
-  { id: "profile", label: "Profile", icon: <User className="h-5 w-5" />, path: "/profile" },
+  { id: "txn", label: "Activity", icon: <Receipt className="h-5 w-5" />, path: "/transactions" },
+  { id: "coach", label: "Coach", icon: <Brain className="h-5 w-5" />, path: "/coach" },
 ];
 
 const BottomNavigation = () => {
@@ -31,7 +31,7 @@ const BottomNavigation = () => {
               key={item.id}
               onClick={() => navigate(item.path)}
               className={cn(
-                "relative flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 press-down",
+                "relative flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all duration-300 press-down",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground hover:-translate-y-0.5"
