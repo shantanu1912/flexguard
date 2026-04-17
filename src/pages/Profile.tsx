@@ -219,6 +219,17 @@ const Profile = () => {
         </button>
 
         <button
+          onClick={() => navigate("/recurring")}
+          className="w-full flex items-center justify-between p-4 hover:bg-secondary transition-colors border-b border-border"
+        >
+          <div className="flex items-center gap-3">
+            <CreditCard className="h-5 w-5 text-muted-foreground" />
+            <span className="text-sm font-medium text-foreground">Recurring Bills</span>
+          </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+
+        <button
           onClick={() => setAccountsOpen(true)}
           className="w-full flex items-center justify-between p-4 hover:bg-secondary transition-colors border-b border-border"
         >
