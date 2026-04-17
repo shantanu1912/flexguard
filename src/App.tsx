@@ -11,6 +11,9 @@ import Goals from "./pages/Goals";
 import Coach from "./pages/Coach";
 import Profile from "./pages/Profile";
 import Auth from "./pages/Auth";
+import Budgets from "./pages/Budgets";
+import Transactions from "./pages/Transactions";
+import Recurring from "./pages/Recurring";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +33,9 @@ const App = () => (
             <Route path="/goals" element={<Goals />} />
             <Route path="/coach" element={<Coach />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/budgets" element={<Budgets />} />
+            <Route path="/transactions" element={<Transactions />} />
+            <Route path="/recurring" element={<Recurring />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
