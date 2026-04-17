@@ -88,13 +88,14 @@ const RecentTransactions = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {recentTransactions.map((transaction) => (
+          {recentTransactions.map((transaction, idx) => (
             <div
               key={transaction.id}
-              className="flex items-center gap-3 p-3 rounded-xl bg-card hover:bg-secondary/50 transition-colors cursor-pointer"
+              className="group flex items-center gap-3 p-3 rounded-xl bg-card hover:bg-secondary/50 transition-all duration-300 cursor-pointer hover:translate-x-1 hover:shadow-md animate-slide-up"
+              style={{ animationDelay: `${idx * 0.05}s` }}
               onClick={() => navigate("/insights")}
             >
-              <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center", getCategoryColor(transaction.category))}>
+              <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6", getCategoryColor(transaction.category))}>
                 {getCategoryIcon(transaction.category)}
               </div>
               

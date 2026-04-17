@@ -35,8 +35,8 @@ const Header = ({ userName }: HeaderProps) => {
     <header className="px-5 py-4 space-y-3">
       {/* App Branding */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
+        <div className="flex items-center gap-2 group cursor-pointer">
+          <div className="w-9 h-9 rounded-xl gradient-primary animate-gradient-shift flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110">
             <Shield className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
@@ -45,9 +45,11 @@ const Header = ({ userName }: HeaderProps) => {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="relative h-9 w-9">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent" />
+          <Button variant="ghost" size="icon" className="relative h-9 w-9 press-down">
+            <Bell className="h-5 w-5 transition-transform hover:animate-wiggle" />
+            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-accent">
+              <span className="absolute inset-0 rounded-full bg-accent animate-ping opacity-75" />
+            </span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

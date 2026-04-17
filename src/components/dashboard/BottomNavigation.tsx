@@ -31,19 +31,27 @@ const BottomNavigation = () => {
               key={item.id}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-200",
+                "relative flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 press-down",
                 isActive
                   ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:-translate-y-0.5"
               )}
             >
               <div className={cn(
-                "p-1.5 rounded-xl transition-all duration-200",
-                isActive && "gradient-primary text-primary-foreground shadow-glow"
+                "p-1.5 rounded-xl transition-all duration-300",
+                isActive
+                  ? "gradient-primary text-primary-foreground shadow-glow scale-110 -translate-y-1"
+                  : "group-hover:scale-110"
               )}>
                 {item.icon}
               </div>
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className={cn(
+                "text-[10px] font-medium transition-all",
+                isActive && "font-semibold"
+              )}>{item.label}</span>
+              {isActive && (
+                <span className="absolute -top-0.5 left-1/2 -translate-x-1/2 h-1 w-8 rounded-full gradient-primary animate-fade-in" />
+              )}
             </button>
           );
         })}
