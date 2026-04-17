@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ScanLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UPIScanner from "./UPIScanner";
+import { useTransactions } from "@/hooks/useTransactions";
+import { toast } from "sonner";
 
 interface FloatingScanButtonProps {
   onExpenseAdded?: (expense: {
@@ -14,6 +16,34 @@ interface FloatingScanButtonProps {
 
 const FloatingScanButton = ({ onExpenseAdded }: FloatingScanButtonProps) => {
   const [scannerOpen, setScannerOpen] = useState(false);
+  const { createTransaction } = useTransactions();
+
+  const handleExpenseAdded = async (expense: {
+    name: string;
+    category: string;
+    amount: number;
+    payeeVpa: string;
+  }) => {
+    // If a parent handler is provided, defer to it (avoids duplicate saves).
+    if (onExpenseAdded) {
+      onExpenseAdded(expense);
+      return;
+    }
+
+    // Otherwise save the transaction ourselves so the scan still gets logged
+    // when used from pages that don't wire up a handler.
+    const result = await createTransaction({
+      name: expense.name,
+      category: expense.category,
+      amount: expense.amount,
+      payee_vpa: expense.payeeVpa,
+      transaction_type: "expense",
+    });
+
+    if (result) {
+      toast.success(`₹${expense.amount.toLocaleString("en-IN")} expense saved!`);
+    }
+  };
 
   return (
     <>
@@ -33,7 +63,7 @@ const FloatingScanButton = ({ onExpenseAdded }: FloatingScanButtonProps) => {
       <UPIScanner
         open={scannerOpen}
         onClose={() => setScannerOpen(false)}
-        onExpenseAdded={onExpenseAdded}
+        onExpenseAdded={handleExpenseAdded}
       />
     </>
   );
