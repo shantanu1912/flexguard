@@ -8,8 +8,15 @@ interface UPIAppOption {
   name: string;
   /** Android package name — used for intent:// targeting */
   androidPackage?: string;
-  /** iOS custom scheme (Android falls back to plain upi://) */
-  iosScheme?: string;
+  /**
+   * Native app scheme (works on BOTH iOS and Android for most UPI apps).
+   * Using the app's own scheme (e.g. phonepe://, tez://) avoids the
+   * "pay via gallery" / ₹2,000 cap warning that PhonePe & GPay show
+   * when receiving a generic upi:// intent from a browser.
+   */
+  nativeScheme?: string;
+  /** Path appended after the scheme (default: "pay") */
+  nativePath?: string;
   fallbackIcon: string;
   color: string;
 }
@@ -23,7 +30,10 @@ const upiApps: UPIAppOption[] = [
     id: "gpay",
     name: "Google Pay",
     androidPackage: "com.google.android.apps.nbu.paisa.user",
-    iosScheme: "tez",
+    // GPay accepts tez://upi/pay on both iOS and Android — bypasses the
+    // generic upi:// gallery flow entirely.
+    nativeScheme: "tez",
+    nativePath: "upi/pay",
     fallbackIcon: "G",
     color: "bg-blue-500",
   },
@@ -31,7 +41,10 @@ const upiApps: UPIAppOption[] = [
     id: "phonepe",
     name: "PhonePe",
     androidPackage: "com.phonepe.app",
-    iosScheme: "phonepe",
+    // CRITICAL: PhonePe's phonepe:// scheme works on Android too and
+    // avoids the "pay up to ₹2,000 via gallery" restriction.
+    nativeScheme: "phonepe",
+    nativePath: "pay",
     fallbackIcon: "P",
     color: "bg-purple-600",
   },
@@ -39,7 +52,8 @@ const upiApps: UPIAppOption[] = [
     id: "paytm",
     name: "Paytm",
     androidPackage: "net.one97.paytm",
-    iosScheme: "paytmmp",
+    nativeScheme: "paytmmp",
+    nativePath: "pay",
     fallbackIcon: "₽",
     color: "bg-sky-500",
   },
@@ -54,7 +68,8 @@ const upiApps: UPIAppOption[] = [
     id: "bhim",
     name: "BHIM",
     androidPackage: "in.org.npci.upiapp",
-    iosScheme: "bhim",
+    nativeScheme: "bhim",
+    nativePath: "pay",
     fallbackIcon: "B",
     color: "bg-emerald-600",
   },
@@ -96,25 +111,31 @@ const normalizeUpiUrl = (rawUrl: string): string => {
 
 /**
  * Build a payment URL targeted at a specific app.
- * - Android: intent:// URL with explicit package + S.browser_fallback_url
- * - iOS: app's custom scheme with same query string
- * - Desktop / unknown: plain upi:// (will likely show OS chooser or fail gracefully)
+ *
+ * Strategy (avoiding PhonePe/GPay "pay via gallery" ₹2,000 cap):
+ * 1. Prefer each app's NATIVE scheme (phonepe://, tez://upi/pay, paytmmp://)
+ *    — these are treated as direct app-to-app calls, not gallery scans.
+ * 2. Fall back to Android intent:// only when no native scheme is defined.
+ * 3. iOS always uses native scheme (only option).
+ * 4. Desktop / unknown: plain upi://.
  */
 const buildAppUrl = (upiUrl: string, app: UPIAppOption): string => {
   const normalized = normalizeUpiUrl(upiUrl);
   const queryStart = normalized.indexOf("?");
   const query = queryStart >= 0 ? normalized.slice(queryStart) : "";
 
+  // 1. Native scheme works on both iOS and Android — preferred path.
+  if (app.nativeScheme) {
+    const path = app.nativePath ?? "pay";
+    return `${app.nativeScheme}://${path}${query}`;
+  }
+
+  // 2. Android intent fallback for apps without a native scheme (Amazon Pay).
   if (isAndroid() && app.androidPackage) {
-    // intent:// is the most reliable way to deep-link to a specific Android app.
     return `intent://pay${query}#Intent;scheme=upi;package=${app.androidPackage};end`;
   }
 
-  if (isIOS() && app.iosScheme) {
-    return `${app.iosScheme}://pay${query}`;
-  }
-
-  // Universal UPI intent — Android will show app chooser, desktop will do nothing useful.
+  // 3. Universal UPI intent — Android shows app chooser, desktop fails gracefully.
   return normalized;
 };
 
