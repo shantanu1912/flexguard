@@ -8,8 +8,15 @@ interface UPIAppOption {
   name: string;
   /** Android package name — used for intent:// targeting */
   androidPackage?: string;
-  /** iOS custom scheme (Android falls back to plain upi://) */
-  iosScheme?: string;
+  /**
+   * Native app scheme (works on BOTH iOS and Android for most UPI apps).
+   * Using the app's own scheme (e.g. phonepe://, tez://) avoids the
+   * "pay via gallery" / ₹2,000 cap warning that PhonePe & GPay show
+   * when receiving a generic upi:// intent from a browser.
+   */
+  nativeScheme?: string;
+  /** Path appended after the scheme (default: "pay") */
+  nativePath?: string;
   fallbackIcon: string;
   color: string;
 }
