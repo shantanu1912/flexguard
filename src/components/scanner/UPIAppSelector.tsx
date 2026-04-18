@@ -121,20 +121,23 @@ const buildAppUrl = (upiUrl: string, app: UPIAppOption): string => {
 const UPIAppSelector = ({ open, onClose, upiUrl, onPaymentInitiated }: UPIAppSelectorProps) => {
   const handleAppSelect = (app: UPIAppOption) => {
     const appUrl = buildAppUrl(upiUrl, app);
-
-    // Use a hidden iframe on iOS for better reliability, location.href on Android.
-    if (isIOS()) {
-      const iframe = document.createElement("iframe");
-      iframe.style.display = "none";
-      iframe.src = appUrl;
-      document.body.appendChild(iframe);
-      setTimeout(() => document.body.removeChild(iframe), 1500);
-    } else {
-      window.location.href = appUrl;
-    }
-
     onPaymentInitiated();
-    onClose();
+
+    const launch = () => {
+      if (isIOS()) {
+        window.location.assign(appUrl);
+        return;
+      }
+
+      const anchor = document.createElement("a");
+      anchor.href = appUrl;
+      anchor.rel = "noopener noreferrer";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+    };
+
+    window.setTimeout(launch, 80);
   };
 
   const handleCopyLink = async () => {
