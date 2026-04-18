@@ -26,13 +26,38 @@ interface UPIScannerProps {
 
 type ScannerStep = "scanning" | "app-selection" | "confirmation";
 
+const extractUpiPayload = (data: string): string | null => {
+  const trimmed = data.trim();
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(trimmed);
+    } catch {
+      return trimmed;
+    }
+  })();
+
+  const candidates = [trimmed, decoded];
+
+  for (const candidate of candidates) {
+    const lower = candidate.toLowerCase();
+    const upiIndex = lower.indexOf("upi://pay");
+    if (upiIndex >= 0) {
+      return candidate.slice(upiIndex).trim();
+    }
+  }
+
+  return null;
+};
+
 const parseUPIQR = (data: string): UPIData | null => {
   try {
-    if (!data.toLowerCase().startsWith("upi://")) {
+    const upiPayload = extractUpiPayload(data);
+
+    if (!upiPayload) {
       return null;
     }
 
-    const url = new URL(data);
+    const url = new URL(upiPayload);
     const params = url.searchParams;
 
     return {
@@ -40,7 +65,7 @@ const parseUPIQR = (data: string): UPIData | null => {
       payeeName: params.get("pn") || params.get("pa")?.split("@")[0] || "Unknown",
       amount: params.get("am") || "",
       transactionNote: params.get("tn") || "",
-      rawUrl: data,
+      rawUrl: upiPayload,
     };
   } catch {
     return null;
