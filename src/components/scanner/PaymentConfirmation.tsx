@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Check, X, ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface UPIData {
   payeeName: string;
@@ -35,6 +35,12 @@ const PaymentConfirmation = ({ open, onClose, upiData, onConfirm, onCancel }: Pa
   const [name, setName] = useState(upiData.payeeName);
   const [amount, setAmount] = useState(upiData.amount);
   const [category, setCategory] = useState("Other");
+
+  useEffect(() => {
+    setName(upiData.payeeName);
+    setAmount(upiData.amount);
+    setCategory("Other");
+  }, [upiData]);
 
   const handleConfirm = () => {
     const amountNum = parseFloat(amount);
