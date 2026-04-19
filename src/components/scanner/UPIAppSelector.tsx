@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Smartphone, ExternalLink, Copy } from "lucide-react";
@@ -119,46 +120,108 @@ const normalizeUpiUrl = (rawUrl: string): string => {
  * 3. iOS always uses native scheme (only option).
  * 4. Desktop / unknown: plain upi://.
  */
-const buildAppUrl = (upiUrl: string, app: UPIAppOption): string => {
+const buildNativeAppUrl = (upiUrl: string, app: UPIAppOption): string => {
   const normalized = normalizeUpiUrl(upiUrl);
   const queryStart = normalized.indexOf("?");
   const query = queryStart >= 0 ? normalized.slice(queryStart) : "";
 
-  // 1. Native scheme works on both iOS and Android — preferred path.
   if (app.nativeScheme) {
     const path = app.nativePath ?? "pay";
     return `${app.nativeScheme}://${path}${query}`;
   }
 
-  // 2. Android intent fallback for apps without a native scheme (Amazon Pay).
-  if (isAndroid() && app.androidPackage) {
-    return `intent://pay${query}#Intent;scheme=upi;package=${app.androidPackage};end`;
-  }
-
-  // 3. Universal UPI intent — Android shows app chooser, desktop fails gracefully.
   return normalized;
 };
 
-const UPIAppSelector = ({ open, onClose, upiUrl, onPaymentInitiated }: UPIAppSelectorProps) => {
-  const handleAppSelect = (app: UPIAppOption) => {
-    const appUrl = buildAppUrl(upiUrl, app);
-    onPaymentInitiated();
+const buildAndroidIntentUrl = (upiUrl: string, app: UPIAppOption): string | null => {
+  if (!app.androidPackage) return null;
 
-    const launch = () => {
-      if (isIOS()) {
-        window.location.assign(appUrl);
+  const normalized = normalizeUpiUrl(upiUrl);
+  const queryStart = normalized.indexOf("?");
+  const query = queryStart >= 0 ? normalized.slice(queryStart) : "";
+  const scheme = app.nativeScheme ?? "upi";
+  const path = app.nativePath ?? "pay";
+
+  return `intent://${path}${query}#Intent;scheme=${scheme};package=${app.androidPackage};end`;
+};
+
+const buildLaunchUrls = (upiUrl: string, app: UPIAppOption) => {
+  const normalized = normalizeUpiUrl(upiUrl);
+  const nativeUrl = buildNativeAppUrl(upiUrl, app);
+  const androidIntentUrl = isAndroid() ? buildAndroidIntentUrl(upiUrl, app) : null;
+
+  if (isIOS()) {
+    return { primaryUrl: nativeUrl, fallbackUrl: normalized };
+  }
+
+  if (isAndroid()) {
+    return {
+      primaryUrl: androidIntentUrl ?? nativeUrl,
+      fallbackUrl: nativeUrl !== normalized ? nativeUrl : normalized,
+    };
+  }
+
+  return { primaryUrl: normalized, fallbackUrl: normalized };
+};
+
+const launchUrl = (url: string) => {
+  window.location.href = url;
+};
+
+const UPIAppSelector = ({ open, onClose, upiUrl, onPaymentInitiated }: UPIAppSelectorProps) => {
+  const pendingReturnRef = useRef(false);
+  const appOpenedRef = useRef(false);
+  const fallbackTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!pendingReturnRef.current) return;
+
+      if (document.visibilityState === "hidden") {
+        appOpenedRef.current = true;
+        if (fallbackTimerRef.current) {
+          window.clearTimeout(fallbackTimerRef.current);
+          fallbackTimerRef.current = null;
+        }
         return;
       }
 
-      const anchor = document.createElement("a");
-      anchor.href = appUrl;
-      anchor.rel = "noopener noreferrer";
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
+      if (document.visibilityState === "visible" && appOpenedRef.current) {
+        pendingReturnRef.current = false;
+        appOpenedRef.current = false;
+        onPaymentInitiated();
+      }
     };
 
-    window.setTimeout(launch, 80);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (fallbackTimerRef.current) {
+        window.clearTimeout(fallbackTimerRef.current);
+      }
+    };
+  }, [onPaymentInitiated]);
+
+  const handleAppSelect = (app: UPIAppOption) => {
+    const { primaryUrl, fallbackUrl } = buildLaunchUrls(upiUrl, app);
+
+    pendingReturnRef.current = true;
+    appOpenedRef.current = false;
+
+    if (fallbackTimerRef.current) {
+      window.clearTimeout(fallbackTimerRef.current);
+    }
+
+    if (isAndroid() && fallbackUrl !== primaryUrl) {
+      fallbackTimerRef.current = window.setTimeout(() => {
+        if (!appOpenedRef.current && document.visibilityState === "visible") {
+          launchUrl(fallbackUrl);
+        }
+      }, 900);
+    }
+
+    launchUrl(primaryUrl);
   };
 
   const handleCopyLink = async () => {
