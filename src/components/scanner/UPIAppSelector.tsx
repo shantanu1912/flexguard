@@ -7,32 +7,18 @@ import { toast } from "sonner";
 interface UPIAppOption {
   id: string;
   name: string;
-  /** Android package name — used for intent:// targeting */
   androidPackage?: string;
-  /**
-   * Native app scheme (works on BOTH iOS and Android for most UPI apps).
-   * Using the app's own scheme (e.g. phonepe://, tez://) avoids the
-   * "pay via gallery" / ₹2,000 cap warning that PhonePe & GPay show
-   * when receiving a generic upi:// intent from a browser.
-   */
   nativeScheme?: string;
-  /** Path appended after the scheme (default: "pay") */
   nativePath?: string;
   fallbackIcon: string;
   color: string;
 }
 
-/**
- * Verified Android package names + iOS schemes for major Indian UPI apps.
- * On Android we use intent:// URLs (most reliable), on iOS custom schemes.
- */
 const upiApps: UPIAppOption[] = [
   {
     id: "gpay",
     name: "Google Pay",
     androidPackage: "com.google.android.apps.nbu.paisa.user",
-    // GPay accepts tez://upi/pay on both iOS and Android — bypasses the
-    // generic upi:// gallery flow entirely.
     nativeScheme: "tez",
     nativePath: "upi/pay",
     fallbackIcon: "G",
@@ -42,8 +28,6 @@ const upiApps: UPIAppOption[] = [
     id: "phonepe",
     name: "PhonePe",
     androidPackage: "com.phonepe.app",
-    // CRITICAL: PhonePe's phonepe:// scheme works on Android too and
-    // avoids the "pay up to ₹2,000 via gallery" restriction.
     nativeScheme: "phonepe",
     nativePath: "pay",
     fallbackIcon: "P",
@@ -55,7 +39,7 @@ const upiApps: UPIAppOption[] = [
     androidPackage: "net.one97.paytm",
     nativeScheme: "paytmmp",
     nativePath: "pay",
-    fallbackIcon: "₽",
+    fallbackIcon: "₹",
     color: "bg-sky-500",
   },
   {
@@ -92,86 +76,81 @@ interface UPIAppSelectorProps {
 const isAndroid = () => /android/i.test(navigator.userAgent);
 const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
 
-/**
- * Re-normalize the UPI URL so all params are properly URL-encoded.
- * Many QR codes have spaces / special chars in `pn` that break app parsing
- * and trigger the "open from gallery" prompt.
- */
 const normalizeUpiUrl = (rawUrl: string): string => {
   try {
-    const u = new URL(rawUrl);
+    const raw = rawUrl.trim();
+    const upiStart = raw.toLowerCase().indexOf("upi://pay");
+    const candidate = upiStart >= 0 ? raw.slice(upiStart) : raw;
+    const url = new URL(candidate);
     const params = new URLSearchParams();
-    u.searchParams.forEach((value, key) => {
-      params.append(key, value);
+
+    url.searchParams.forEach((value, key) => {
+      if (value.trim()) {
+        params.set(key, value.trim());
+      }
     });
+
+    if (!params.get("cu")) {
+      params.set("cu", "INR");
+    }
+
     return `upi://pay?${params.toString()}`;
   } catch {
     return rawUrl;
   }
 };
 
-/**
- * Build a payment URL targeted at a specific app.
- *
- * Strategy (avoiding PhonePe/GPay "pay via gallery" ₹2,000 cap):
- * 1. Prefer each app's NATIVE scheme (phonepe://, tez://upi/pay, paytmmp://)
- *    — these are treated as direct app-to-app calls, not gallery scans.
- * 2. Fall back to Android intent:// only when no native scheme is defined.
- * 3. iOS always uses native scheme (only option).
- * 4. Desktop / unknown: plain upi://.
- */
 const buildNativeAppUrl = (upiUrl: string, app: UPIAppOption): string => {
   const normalized = normalizeUpiUrl(upiUrl);
-  const queryStart = normalized.indexOf("?");
-  const query = queryStart >= 0 ? normalized.slice(queryStart) : "";
+  const query = normalized.includes("?") ? normalized.slice(normalized.indexOf("?")) : "";
 
-  if (app.nativeScheme) {
-    const path = app.nativePath ?? "pay";
-    return `${app.nativeScheme}://${path}${query}`;
+  if (!app.nativeScheme) {
+    return normalized;
   }
 
-  return normalized;
+  return `${app.nativeScheme}://${app.nativePath ?? "pay"}${query}`;
 };
 
 const buildAndroidIntentUrl = (upiUrl: string, app: UPIAppOption): string | null => {
   if (!app.androidPackage) return null;
 
   const normalized = normalizeUpiUrl(upiUrl);
-  const queryStart = normalized.indexOf("?");
-  const query = queryStart >= 0 ? normalized.slice(queryStart) : "";
-  const scheme = app.nativeScheme ?? "upi";
-  const path = app.nativePath ?? "pay";
+  const query = normalized.includes("?") ? normalized.slice(normalized.indexOf("?")) : "";
 
-  return `intent://${path}${query}#Intent;scheme=${scheme};package=${app.androidPackage};end`;
+  return `intent://upi/pay${query}#Intent;scheme=upi;package=${app.androidPackage};end`;
 };
 
 const buildLaunchUrls = (upiUrl: string, app: UPIAppOption) => {
   const normalized = normalizeUpiUrl(upiUrl);
-  const nativeUrl = buildNativeAppUrl(upiUrl, app);
-  const androidIntentUrl = isAndroid() ? buildAndroidIntentUrl(upiUrl, app) : null;
-
-  if (isIOS()) {
-    return { primaryUrl: nativeUrl, fallbackUrl: normalized };
-  }
 
   if (isAndroid()) {
     return {
-      primaryUrl: androidIntentUrl ?? nativeUrl,
-      fallbackUrl: nativeUrl !== normalized ? nativeUrl : normalized,
+      primaryUrl: buildAndroidIntentUrl(upiUrl, app) ?? normalized,
+      fallbackUrl: normalized,
     };
   }
 
-  return { primaryUrl: normalized, fallbackUrl: normalized };
+  if (isIOS()) {
+    const nativeUrl = buildNativeAppUrl(upiUrl, app);
+    return {
+      primaryUrl: nativeUrl,
+      fallbackUrl: normalized,
+    };
+  }
+
+  return {
+    primaryUrl: normalized,
+    fallbackUrl: normalized,
+  };
 };
 
 const launchUrl = (url: string) => {
-  window.location.href = url;
+  window.location.assign(url);
 };
 
 const UPIAppSelector = ({ open, onClose, upiUrl, onPaymentInitiated }: UPIAppSelectorProps) => {
   const pendingReturnRef = useRef(false);
   const appOpenedRef = useRef(false);
-  const fallbackTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -179,10 +158,6 @@ const UPIAppSelector = ({ open, onClose, upiUrl, onPaymentInitiated }: UPIAppSel
 
       if (document.visibilityState === "hidden") {
         appOpenedRef.current = true;
-        if (fallbackTimerRef.current) {
-          window.clearTimeout(fallbackTimerRef.current);
-          fallbackTimerRef.current = null;
-        }
         return;
       }
 
@@ -193,34 +168,25 @@ const UPIAppSelector = ({ open, onClose, upiUrl, onPaymentInitiated }: UPIAppSel
       }
     };
 
+    const handlePageHide = () => {
+      if (pendingReturnRef.current) {
+        appOpenedRef.current = true;
+      }
+    };
+
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pagehide", handlePageHide);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      if (fallbackTimerRef.current) {
-        window.clearTimeout(fallbackTimerRef.current);
-      }
+      window.removeEventListener("pagehide", handlePageHide);
     };
   }, [onPaymentInitiated]);
 
   const handleAppSelect = (app: UPIAppOption) => {
-    const { primaryUrl, fallbackUrl } = buildLaunchUrls(upiUrl, app);
-
+    const { primaryUrl } = buildLaunchUrls(upiUrl, app);
     pendingReturnRef.current = true;
     appOpenedRef.current = false;
-
-    if (fallbackTimerRef.current) {
-      window.clearTimeout(fallbackTimerRef.current);
-    }
-
-    if (isAndroid() && fallbackUrl !== primaryUrl) {
-      fallbackTimerRef.current = window.setTimeout(() => {
-        if (!appOpenedRef.current && document.visibilityState === "visible") {
-          launchUrl(fallbackUrl);
-        }
-      }, 900);
-    }
-
     launchUrl(primaryUrl);
   };
 
@@ -268,18 +234,18 @@ const UPIAppSelector = ({ open, onClose, upiUrl, onPaymentInitiated }: UPIAppSel
             <Button
               key={app.id}
               variant="outline"
-              className="flex flex-col items-center gap-2 h-auto py-4 hover:bg-secondary transition-all"
+              className="flex h-auto flex-col items-center gap-2 py-4 transition-all hover:bg-secondary"
               onClick={() => handleAppSelect(app)}
             >
-              <div className={`w-12 h-12 rounded-full ${app.color} flex items-center justify-center overflow-hidden`}>
-                <span className="text-white font-bold text-lg">{app.fallbackIcon}</span>
+              <div className={`flex h-12 w-12 items-center justify-center overflow-hidden rounded-full ${app.color}`}>
+                <span className="text-lg font-bold text-white">{app.fallbackIcon}</span>
               </div>
-              <span className="text-xs text-muted-foreground text-center">{app.name}</span>
+              <span className="text-center text-xs text-muted-foreground">{app.name}</span>
             </Button>
           ))}
         </div>
 
-        <p className="text-xs text-muted-foreground text-center mt-4 flex items-center justify-center gap-1">
+        <p className="mt-4 flex items-center justify-center gap-1 text-center text-xs text-muted-foreground">
           <ExternalLink className="h-3 w-3" />
           Opens your selected app to complete payment
         </p>
