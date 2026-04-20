@@ -15,6 +15,7 @@ import Budgets from "./pages/Budgets";
 import Transactions from "./pages/Transactions";
 import Recurring from "./pages/Recurring";
 import NotFound from "./pages/NotFound";
+import RequireAuth from "./components/RequireAuth";
 
 const queryClient = new QueryClient();
 
@@ -27,15 +28,15 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/insights" element={<Insights />} />
-            <Route path="/goals" element={<Goals />} />
-            <Route path="/coach" element={<Coach />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/budgets" element={<Budgets />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/recurring" element={<Recurring />} />
+            <Route path="/" element={<RequireAuth><Index /></RequireAuth>} />
+            <Route path="/insights" element={<RequireAuth><Insights /></RequireAuth>} />
+            <Route path="/goals" element={<RequireAuth><Goals /></RequireAuth>} />
+            <Route path="/coach" element={<RequireAuth><Coach /></RequireAuth>} />
+            <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+            <Route path="/budgets" element={<RequireAuth><Budgets /></RequireAuth>} />
+            <Route path="/transactions" element={<RequireAuth><Transactions /></RequireAuth>} />
+            <Route path="/recurring" element={<RequireAuth><Recurring /></RequireAuth>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
